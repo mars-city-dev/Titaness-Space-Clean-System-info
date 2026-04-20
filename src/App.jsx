@@ -85,7 +85,8 @@ const App = () => {
 
   // WebSocket Telemetry Connection
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8080');
+    // Dynamic host resolution for multi-context Federation access
+    const ws = new WebSocket(`ws://${window.location.hostname}:8080`);
     
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);

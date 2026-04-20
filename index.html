@@ -1,13 +1,276 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>titaness-space-clean-system</title>
-  </head>
-  <body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TITANESS | Space Clean System</title>
+    
+    <!-- 🧬 High-Fidelity CDNs -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        body { background-color: #050505; color: #cbd5e1; font-family: 'Outfit', sans-serif; overflow: hidden; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        @keyframes pulse-cyan { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .anim-pulse-cyan { animation: pulse-cyan 2s infinite; }
+    </style>
+</head>
+<body>
     <div id="root"></div>
-    <script type="module" src="./src/main.jsx"></script>
-  </body>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- Lucide Icon Bridge ---
+        const Icon = ({ name, size = 16, className = "" }) => {
+            useEffect(() => {
+                if (window.lucide) { window.lucide.createIcons(); }
+            }, [name]);
+            return <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>;
+        };
+
+        const StatusCard = ({ label, value, color, icon: IconName, trend }) => (
+            <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-2xl backdrop-blur-xl transition-all hover:border-slate-700">
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-slate-500">
+                        <Icon name={IconName} size={12} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest leading-none">{label}</span>
+                    </div>
+                    {trend && <span className="text-[9px] font-mono text-cyan-400">{trend}</span>}
+                </div>
+                <div className={`text-2xl font-mono ${color}`}>{value}</div>
+            </div>
+        );
+
+        const TacticalGrid = ({ selectedTarget, status }) => {
+            const canvasRef = useRef(null);
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                let angle = 0;
+                let frame;
+                const render = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    angle += 0.002;
+                    
+                    // Draw Orbital Shells
+                    ctx.strokeStyle = '#1e293b';
+                    ctx.setLineDash([5, 15]);
+                    for (let i = 1; i <= 5; i++) {
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, i * 60, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                    ctx.setLineDash([]);
+
+                    // Draw Earth Core
+                    const grad = ctx.createRadialGradient(centerX, centerY, 5, centerX, centerY, 50);
+                    grad.addColorStop(0, '#0f172a');
+                    grad.addColorStop(1, '#1e293b');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath(); ctx.arc(centerX, centerY, 50, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#334155'; ctx.stroke();
+
+                    // Debris Field
+                    for (let i = 0; i < 40; i++) {
+                        const radius = 70 + (i * 7);
+                        const curAngle = angle * (i % 2 === 0 ? 1 : -1) + (i * 0.4);
+                        const x = centerX + Math.cos(curAngle) * radius;
+                        const y = centerY + Math.sin(curAngle) * radius;
+                        
+                        ctx.fillStyle = i % 10 === 0 ? '#fbbf24' : '#475569';
+                        ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill();
+
+                        if (selectedTarget && i === 12) {
+                            ctx.strokeStyle = status === 'CYAN' ? '#22d3ee' : '#fbbf24';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(x, y);
+                            ctx.strokeStyle = status === 'CYAN' ? 'rgba(34,211,238,0.1)' : 'rgba(251,191,36,0.1)';
+                            ctx.stroke();
+                        }
+                    }
+                    frame = requestAnimationFrame(render);
+                };
+                render();
+                return () => cancelAnimationFrame(frame);
+            }, [selectedTarget, status]);
+            return <canvas ref={canvasRef} width={800} height={800} className="w-full h-full object-contain opacity-50" />;
+        };
+
+        const App = () => {
+            const [status, setStatus] = useState('AMBER');
+            const [selectedDebris, setSelectedDebris] = useState(null);
+            const [time, setTime] = useState(new Date().toISOString());
+            const [log, setLog] = useState([
+                '[SYSTEM] Space Clean Network Initialized.', 
+                '[MdEC] Syncing with Orbital Blockchain...',
+                '[OISL] Laser Link Established with TCU-Alpha.'
+            ]);
+
+            const junkGrid = [
+                { id: 'SDEC-24-LEO-A4F2', type: 'Titan IIIC Stage', orbit: '840km', velocity: '7.42', risk: 'High' },
+                { id: 'SDEC-24-LEO-B9C1', type: 'Dead Comms Sat', orbit: '450km', velocity: '7.65', risk: 'Medium' },
+                { id: 'SDEC-24-LEO-X009', type: 'Fairing Fragment', orbit: '610km', velocity: '7.55', risk: 'Low' },
+                { id: 'SDEC-24-LEO-F552', type: 'NASA Toolbox', orbit: '400km', velocity: '7.71', risk: 'High' },
+            ];
+
+            useEffect(() => {
+                const timer = setInterval(() => setTime(new Date().toISOString()), 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            const handleAcquire = () => {
+                if (!selectedDebris) return;
+                setStatus('CYAN');
+                setLog(prev => [`[GNC] ACQUIRE COMMAND: ${selectedDebris.id}`, `[SAFETY] CONSENSUS RELAY CLOSED.`, ...prev]);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col bg-black selection:bg-cyan-500/30">
+                    {/* --- Navigation --- */}
+                    <nav className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-slate-900/20 backdrop-blur-3xl z-50">
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-cyan-500 rounded-sm flex items-center justify-center text-black font-black shadow-[0_0_20px_rgba(6,182,212,0.5)]">T</div>
+                                <div className="font-bold tracking-tighter text-xl text-white">TITANESS <span className="text-cyan-400 font-light italic">SCN</span></div>
+                            </div>
+                            <div className="h-6 w-[1px] bg-white/10" />
+                            <div className="flex gap-4 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
+                                <span className="text-cyan-400/80">GLOBAL GRID</span>
+                                <span className="opacity-30">TACTICAL POV</span>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-8 font-mono text-[9px] tracking-[0.2em] text-slate-500 uppercase">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-1.5 h-1.5 rounded-full ${status === 'CYAN' ? 'bg-cyan-400 shadow-[0_0_10px_#22d3ee]' : 'bg-amber-400 anim-pulse-cyan'}`}></div>
+                                {status} OPERATIONAL
+                            </div>
+                            <div className="text-slate-100">{time.split('T')[1].split('.')[0]} UTC</div>
+                        </div>
+                    </nav>
+
+                    <div className="flex-1 p-8 grid grid-cols-12 gap-8 overflow-hidden">
+                        {/* --- Assets --- */}
+                        <div className="col-span-3 flex flex-col gap-6">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
+                                    <Icon name="database" size={14} /> Registry
+                                </h2>
+                                <span className="text-[9px] font-mono text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded border border-cyan-400/20">{junkGrid.length} TARGETS</span>
+                            </div>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
+                                {junkGrid.map(item => (
+                                    <div 
+                                        key={item.id} 
+                                        onClick={() => setSelectedDebris(item)}
+                                        className={`p-4 border-l-2 cursor-pointer transition-all group ${selectedDebris?.id === item.id ? 'bg-cyan-400/10 border-cyan-400 shadow-[inset_4px_0_20px_-5px_rgba(34,211,238,0.2)]' : 'bg-slate-900/20 border-slate-800 hover:border-slate-600 hover:bg-slate-900/40'}`}
+                                    >
+                                        <div className={`text-xs font-mono mb-1 ${selectedDebris?.id === item.id ? 'text-cyan-400' : 'text-slate-200'}`}>{item.id}</div>
+                                        <div className="flex justify-between items-center text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                                            <span>{item.orbit} // {item.velocity}km/s</span>
+                                            <span className={item.risk === 'High' ? 'text-amber-500' : ''}>{item.risk} RISK</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* --- Simulation --- */}
+                        <div className="col-span-6 flex flex-col">
+                            <div className="flex-1 glass-card rounded-[3rem] border border-white/5 relative overflow-hidden shadow-[inset_0_0_100px_rgba(0,0,0,0.9)]">
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <TacticalGrid selectedTarget={selectedDebris} status={status} />
+                                </div>
+
+                                <div className="absolute inset-0 p-12 flex flex-col justify-between pointer-events-none">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <Icon name="navigation" size={14} className="text-cyan-400" />
+                                                <span className="text-[10px] font-bold tracking-[0.3em] text-cyan-400/60 uppercase">Orbital Vectoring</span>
+                                            </div>
+                                            <h1 className="text-7xl font-extralight text-white tracking-tighter leading-none">{selectedDebris ? selectedDebris.id : 'SCANNING_VOID'}</h1>
+                                            {selectedDebris && <p className="text-cyan-400 font-mono text-sm tracking-[0.2em] mt-4 uppercase">{selectedDebris.type} // STABLE TRACK</p>}
+                                        </div>
+                                        {selectedDebris && (
+                                            <div className="bg-black/60 border border-white/10 p-6 rounded-3xl backdrop-blur-xl text-right">
+                                                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Capture Score</div>
+                                                <div className="text-3xl font-mono text-cyan-400">98.4<span className="text-sm opacity-40">%</span></div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex justify-center">
+                                        <button 
+                                            onClick={status === 'AMBER' ? handleAcquire : () => setStatus('AMBER')}
+                                            disabled={!selectedDebris}
+                                            className={`pointer-events-auto group px-20 py-8 rounded-[2rem] border-2 font-black tracking-[0.3em] uppercase transition-all duration-700 shadow-2xl ${
+                                                !selectedDebris ? 'opacity-20 grayscale border-slate-800' : 
+                                                status === 'CYAN' ? 'bg-cyan-500 text-black border-cyan-300 scale-105 shadow-[0_0_60px_rgba(6,182,212,0.4)]' : 
+                                                'text-amber-500 border-amber-500/40 hover:border-amber-400 hover:bg-amber-400/5 hover:scale-[1.02]'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-5">
+                                                <Icon name={status === 'CYAN' ? 'unlock' : 'lock'} size={24} />
+                                                <span className="text-2xl">{status === 'CYAN' ? 'Release Control' : 'Acquire Target'}</span>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* --- Telemetry --- */}
+                        <div className="col-span-3 flex flex-col gap-6 overflow-hidden">
+                            <div className="grid grid-cols-1 gap-4">
+                                <StatusCard label="Propellant" value="84.22%" color="text-cyan-400" icon="zap" trend="+0.2%" />
+                                <StatusCard label="Sync Variance" value="0.0012" color="text-white" icon="activity" trend="-4%" />
+                            </div>
+
+                            <div className="flex-1 bg-slate-900/20 border border-slate-800/50 rounded-3xl flex flex-col overflow-hidden shadow-2xl">
+                                <div className="p-4 border-b border-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center justify-between bg-white/[0.02]">
+                                    <div className="flex items-center gap-2"><Icon name="activity" size={14} /> Mission Journal</div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-6 font-mono text-[10px] leading-relaxed custom-scrollbar bg-black/20 text-slate-400">
+                                    {log.map((line, i) => (
+                                        <div key={i} className={`mb-3 pb-3 border-b border-white/5 last:border-0 ${line.includes('[SYSTEM]') ? 'text-slate-600' : 'text-slate-300'}`}>
+                                            <div className="flex justify-between opacity-30 text-[8px] mb-1">
+                                                <span>LOG_ID_{800 - i}</span>
+                                                <span>{time.split('T')[1].split('.')[0]}</span>
+                                            </div>
+                                            <div className="pl-3 border-l border-cyan-500/20">{line}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <style dangerouslySetInnerHTML={{ __html: `
+                        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+                        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+                        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334155; }
+                    `}} />
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
 </html>

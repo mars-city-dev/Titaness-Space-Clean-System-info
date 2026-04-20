@@ -50,7 +50,8 @@ export const eciToGeodetic = (positionECI, date = new Date()) => {
  */
 export const fetchDebrisData = async (category = 'active', limit = 50) => {
   // Use our internal Node.js proxy to bypass CORS issues
-  const url = `http://localhost:8080/tle?GROUP=${category}`;
+  // Routed via the Curator's Federation Proxy (Port 9999 -> 8080)
+  const url = `/api/proxy/8080/tle?GROUP=${category}`;
   
   try {
     const response = await fetch(url);
