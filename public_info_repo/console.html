@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDEC | Public Information Console</title>
+    
+    <!-- 🧬 High-Fidelity CDNs -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        body { background-color: #050505; color: #cbd5e1; font-family: 'Outfit', sans-serif; overflow: hidden; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        @keyframes pulse-cyan { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .anim-pulse-cyan { animation: pulse-cyan 2s infinite; }
+        .glass-card { background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        const Icon = ({ name, size = 16, className = "" }) => {
+            useEffect(() => {
+                if (window.lucide) { window.lucide.createIcons(); }
+            }, [name]);
+            return <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>;
+        };
+
+        const StatusCard = ({ label, value, color, icon: IconName, trend }) => (
+            <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-2xl backdrop-blur-xl transition-all hover:border-slate-700">
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-slate-500">
+                        <Icon name={IconName} size={12} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest leading-none">{label}</span>
+                    </div>
+                    {trend && <span className="text-[9px] font-mono text-cyan-400">{trend}</span>}
+                </div>
+                <div className={`text-xl font-mono ${color}`}>{value}</div>
+            </div>
+        );
+
+        const TacticalGrid = ({ selectedTarget, stage }) => {
+            const canvasRef = useRef(null);
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                let angle = 0;
+                let frame;
+                const render = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    angle += 0.002;
+                    
+                    // Draw Orbital Rings
+                    ctx.strokeStyle = '#1e293b';
+                    ctx.setLineDash([5, 10]);
+                    for (let i = 1; i <= 4; i++) {
+                        ctx.beginPath(); ctx.arc(centerX, centerY, i * 80, 0, Math.PI * 2); ctx.stroke();
+                    }
+                    ctx.setLineDash([]);
+
+                    // Earth Sphere
+                    const grad = ctx.createRadialGradient(centerX, centerY, 5, centerX, centerY, 60);
+                    grad.addColorStop(0, '#0f172a');
+                    grad.addColorStop(1, '#1e293b');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath(); ctx.arc(centerX, centerY, 60, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#334155'; ctx.stroke();
+
+                    // Debris Field
+                    for (let i = 0; i < 30; i++) {
+                        const radius = 90 + (i * 8);
+                        const curAngle = angle * (i % 2 === 0 ? 1 : -1) + (i * 0.5);
+                        const x = centerX + Math.cos(curAngle) * radius;
+                        const y = centerY + Math.sin(curAngle) * radius;
+                        
+                        ctx.fillStyle = '#475569';
+                        ctx.beginPath(); ctx.arc(x, y, 1.2, 0, Math.PI * 2); ctx.fill();
+
+                        if (selectedTarget && i === 12) {
+                            ctx.strokeStyle = stage === 'STANDBY' ? '#fbbf24' : '#22d3ee';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.stroke();
+                            
+                            if (stage !== 'STANDBY') {
+                                ctx.strokeStyle = 'rgba(34,211,238,0.2)';
+                                ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(x, y); ctx.stroke();
+                            }
+                        }
+                    }
+                    frame = requestAnimationFrame(render);
+                };
+                render();
+                return () => cancelAnimationFrame(frame);
+            }, [selectedTarget, stage]);
+            return <canvas ref={canvasRef} width={800} height={800} className="w-full h-full object-contain opacity-40 blur-[1px]" />;
+        };
+
+        const App = () => {
+            const [stage, setStage] = useState('STANDBY'); // STANDBY, ZKP_VERIFYING, M_ID_MINTING, COMPLETE
+            const [selectedTarget, setSelectedTarget] = useState(null);
+            const [log, setLog] = useState([
+                '[SDEC] Public Console v1.0.1 Initialized.',
+                '[LEGITIMACY] Sovereign Status Protocol: ACTIVE.',
+                '[ZKP] Zero-Knowledge Verification Engine: STANDBY.'
+            ]);
+
+            const targets = [
+                { id: 'SDEC-24-LEO-A4F2', domain: 'SOVEREIGN - PRC', type: 'Titan IIIC Stage', orbit: '840km', risk: 'HIGH' },
+                { id: 'SDEC-24-LEO-B9C1', domain: 'ABANDONED - USA', type: 'Dead Comms Sat', orbit: '450km', risk: 'MEDIUM' },
+                { id: 'SDEC-25-GEO-R772', domain: 'PROTECTED - RU', type: 'Rocket Body', orbit: '35780km', risk: 'HIGH' },
+                { id: 'SDEC-24-LEO-X009', domain: 'UNIDENTIFIED', type: 'Fairing Fragment', orbit: '610km', risk: 'LOW' }
+            ];
+
+            const handleInitiate = () => {
+                if (!selectedTarget) return;
+                setStage('ZKP_VERIFYING');
+                setLog(prev => [`[MISSION] INITIATING PROTECTIVE RETRIEVAL: ${selectedTarget.id}`, `[ZKP] Negotiating blind verification hash...`, ...prev]);
+                
+                setTimeout(() => {
+                    setStage('M_ID_MINTING');
+                    setLog(prev => [`[ZKP] Blind verification SUCCESSFUL. National security integrity: 100%.`, `[MDEC] Minting Forensic M-ID Tag...`, ...prev]);
+                    
+                    setTimeout(() => {
+                        setStage('COMPLETE');
+                        setLog(prev => [`[MDEC] M-ID MINTED: SDEC-MD-${Math.random().toString(16).slice(2, 10).toUpperCase()}`, `[SDEC] Asset tokenized and added to recycling ledger.`, ...prev]);
+                    }, 2000);
+                }, 2500);
+            };
+
+            const reset = () => {
+                setStage('STANDBY');
+                setSelectedTarget(null);
+                setLog(prev => [`[SYSTEM] Console reset. Waiting for discovery scan...`, ...prev]);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col bg-black selection:bg-cyan-500/30 text-slate-300">
+                    {/* --- Nav --- */}
+                    <nav className="h-14 border-b border-white/5 flex items-center justify-between px-8 bg-slate-900/40 backdrop-blur-3xl z-50">
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 bg-cyan-500 rounded-sm flex items-center justify-center text-black font-black text-xs">S</div>
+                                <div className="font-bold tracking-tighter text-md text-white uppercase">SDEC <span className="text-cyan-400 font-light lowercase opacity-60">info console</span></div>
+                            </div>
+                            <div className="h-4 w-[1px] bg-white/10" />
+                            <div className="text-[9px] font-bold tracking-widest text-slate-500 uppercase">Public Information Protocol v1.0</div>
+                        </div>
+                        <div className="text-[9px] font-mono text-slate-500 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                            Status: <span className="text-cyan-400">Read-Only Demostration</span>
+                        </div>
+                    </nav>
+
+                    <div className="flex-1 p-6 grid grid-cols-12 gap-6 overflow-hidden">
+                        {/* --- Target Registry --- */}
+                        <div className="col-span-3 flex flex-col gap-4 overflow-hidden">
+                            <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2 px-2">
+                                <Icon name="globe" size={12} /> Target Awareness
+                            </h2>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
+                                {targets.map(target => (
+                                    <div 
+                                        key={target.id} 
+                                        onClick={stage === 'STANDBY' ? () => setSelectedTarget(target) : null}
+                                        className={`p-3 border rounded-xl transition-all ${selectedTarget?.id === target.id ? 'bg-cyan-400/10 border-cyan-400 shadow-[0_0_20px_-5px_rgba(34,211,238,0.2)]' : 'bg-slate-900/20 border-slate-800 hover:border-slate-700 cursor-pointer'}`}
+                                    >
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className="text-[10px] font-mono text-slate-200">{target.id}</span>
+                                            <span className={`text-[8px] px-1.5 py-0.5 rounded border ${target.risk === 'HIGH' ? 'text-amber-500 border-amber-500/20 bg-amber-500/5' : 'text-slate-400 border-slate-700'}`}>{target.risk}</span>
+                                        </div>
+                                        <div className="text-[9px] font-bold text-cyan-400/60 uppercase tracking-widest mb-1">{target.domain}</div>
+                                        <div className="text-[9px] text-slate-500 uppercase tracking-widest">{target.type} // {target.orbit}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* --- Tactical Visualizer --- */}
+                        <div className="col-span-6 flex flex-col">
+                            <div className="flex-1 glass-card rounded-[2.5rem] relative overflow-hidden flex flex-col">
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <TacticalGrid selectedTarget={selectedTarget} stage={stage} />
+                                </div>
+                                <div className="absolute inset-x-0 top-12 text-center pointer-events-none">
+                                    <div className="text-[10px] font-bold text-cyan-400/40 uppercase tracking-[0.4em] mb-2">Tactical SDEC Grid Projection</div>
+                                    <h1 className="text-5xl font-extralight text-white tracking-widest uppercase">{selectedTarget ? selectedTarget.id : 'Scanning Void...'}</h1>
+                                </div>
+
+                                <div className="absolute inset-x-12 bottom-12 flex flex-col items-center">
+                                    {stage === 'STANDBY' ? (
+                                        <button 
+                                            onClick={handleInitiate}
+                                            disabled={!selectedTarget}
+                                            className={`px-12 py-4 rounded-full border-2 font-black tracking-widest uppercase transition-all duration-500 ${!selectedTarget ? 'opacity-20 border-slate-800' : 'border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-black shadow-[0_0_30px_rgba(245,158,11,0.2)] hover:scale-105'}`}
+                                        >
+                                            Initiate Protective Retrieval
+                                        </button>
+                                    ) : stage === 'COMPLETE' ? (
+                                        <div className="flex flex-col items-center gap-4">
+                                            <div className="bg-cyan-500 text-black px-8 py-3 rounded-full font-black tracking-widest flex items-center gap-3 animate-bounce">
+                                                <Icon name="check-circle" size={18} /> ASSET TOKENIZED
+                                            </div>
+                                            <button onClick={reset} className="text-[9px] text-slate-500 hover:text-white uppercase tracking-[0.3em] transition-colors">Clear Simulation</button>
+                                        </div>
+                                    ) : (
+                                        <div className="w-64">
+                                            <div className="flex justify-between text-[10px] uppercase font-bold tracking-widest mb-2">
+                                                <span className="text-cyan-400 animate-pulse">{stage.replace('_', ' ')}</span>
+                                                <span>65%</span>
+                                            </div>
+                                            <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+                                                <div className="h-full bg-cyan-500 w-[65%] animate-[progress_2s_infinite]"></div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* --- Intelligence Log --- */}
+                        <div className="col-span-3 flex flex-col gap-4 overflow-hidden">
+                            <StatusCard 
+                                label="Salvage Framework" 
+                                value={stage === 'COMPLETE' ? "Protective Complete" : "Neutral / Civil"} 
+                                color="text-amber-500" 
+                                icon="shield" 
+                            />
+                            <div className="flex-1 bg-slate-900/20 border border-slate-800 rounded-2xl flex flex-col overflow-hidden shadow-2xl">
+                                <div className="p-3 border-b border-white/5 text-[9px] font-black uppercase tracking-widest text-slate-600 bg-white/[0.01]">
+                                    Consortium Log
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4 font-mono text-[9px] space-y-3 custom-scrollbar text-slate-500">
+                                    {log.map((line, i) => (
+                                        <div key={i} className={`p-2 rounded border border-white/5 ${line.includes('[ZKP]') ? 'bg-cyan-400/5 text-cyan-200' : line.includes('[MISSION]') ? 'bg-amber-400/5 text-amber-200' : 'bg-black/20'}`}>
+                                            <div className="opacity-20 text-[7px] mb-1">M-ID :: {1000 - i}</div>
+                                            {line}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* --- Footer Status --- */}
+                    <div className="h-8 border-t border-white/5 px-8 flex items-center justify-between text-[8px] font-bold tracking-widest text-slate-600 uppercase">
+                        <div>Powered by MdEC Ledger Protocol</div>
+                        <div className="flex gap-6">
+                            <span>SDEC: Non-Aggression Active</span>
+                            <span className="text-cyan-400">© 2026 Titaness: Sentient Systems Co.</span>
+                        </div>
+                    </div>
+
+                    <style dangerouslySetInnerHTML={{ __html: `
+                        @keyframes progress { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+                    `}} />
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
