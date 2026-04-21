@@ -3,7 +3,7 @@
 
 **Official Repository of the Space Debris Excellence Consortium (SDEC)**  
 **Authored by:** Titaness: Sentient Systems Co.  
-**Strategic Partner:** [Metadata Excellence Consortium (MdEC)](https://metadataexcellence.com)
+**Strategic Partner:** [metadataexcellence.com](https://metadataexcellence.com/)
 
 ---
 
