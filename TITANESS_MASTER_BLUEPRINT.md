@@ -1,7 +1,7 @@
 # TITANESS: SENTIENT SYSTEMS CO.
 ## MASTER ARCHITECTURE & ENGINEERING BLUEPRINT
 **Document ID:** TITANESS-MASTER-2026-V1
-**Project Lead:** Capn Chris Olds
+**Project Lead:** Chris Olds
 **Divisions:** Space Clean System | Space Debris Excellence Consortium (SDEC) | Space Faktory
 
 ---
