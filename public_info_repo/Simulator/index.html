@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TITANESS | Kessler Run Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background: #020617; font-family: 'JetBrains Mono', monospace; }
+        canvas { display: block; }
+        .hud-overlay { pointer-events: none; }
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 10;
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(34, 211, 238, 0.05) 50%, rgba(0, 0, 0, 0) 100%);
+            opacity: 0.1;
+            position: absolute;
+            bottom: 100%;
+            animation: scanline 6s linear infinite;
+        }
+        @keyframes scanline {
+            0% { bottom: 100%; }
+            100% { bottom: -100px; }
+        }
+        .crt-effect::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+        .btn-cyan {
+            background: rgba(8, 145, 178, 0.2);
+            border: 1px solid #0891b2;
+            color: #22d3ee;
+            transition: all 0.3s ease;
+        }
+        .btn-cyan:hover {
+            background: #0891b2;
+            color: white;
+            box-shadow: 0 0 15px #0891b2;
+        }
+    </style>
+</head>
+<body class="crt-effect">
+    <div class="scanline"></div>
+
+    <!-- MAIN HUD -->
+    <div id="ui-layer" class="absolute inset-0 z-20 flex flex-col pointer-events-none p-6 text-cyan-400">
+        
+        <!-- TOP NAV -->
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-xl font-bold tracking-tighter">TITANESS: KESSLER RUN <span class="text-xs font-normal border border-cyan-500/50 px-1 ml-2">SIM-v0.42</span></h1>
+                <p class="text-[10px] uppercase tracking-widest text-cyan-600">SDEC Junker Guild Recruitment Drive</p>
+            </div>
+            <div class="text-right font-mono">
+                <div class="text-xs opacity-50">LATENCY-GHOST SYNC</div>
+                <div id="sync-indicator" class="text-lg font-bold">DISCONNECTED</div>
+            </div>
+        </div>
+
+        <!-- CENTER CROSSHAIR (Only in Game) -->
+        <div id="crosshair" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <div class="w-12 h-12 border border-cyan-500/30 rounded-full flex items-center justify-center">
+                <div class="w-1 h-1 bg-cyan-400 rounded-full"></div>
+            </div>
+            <div class="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold">KINETIC LOCK</div>
+        </div>
+
+        <!-- BOTTOM STATUS -->
+        <div class="mt-auto flex justify-between items-end">
+            <div class="space-y-1">
+                <div class="text-[8px] uppercase text-cyan-700">Propulsion Delta-V</div>
+                <div class="w-48 h-1 bg-slate-900 rounded-full overflow-hidden border border-cyan-900">
+                    <div id="fuel-bar" class="h-full bg-cyan-400" style="width: 100%"></div>
+                </div>
+                <div class="flex gap-4 text-[9px] font-mono mt-2">
+                    <span>ALT: <span id="alt-val">421.4km</span></span>
+                    <span>VEL: <span id="vel-val">7.66km/s</span></span>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-[10px] font-bold text-amber-500 uppercase mb-1">M-ID Potential</div>
+                <div id="score-val" class="text-3xl font-bold text-white">00000</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MENUS -->
+    <div id="start-menu" class="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-6 text-center">
+        <div class="max-w-md border border-cyan-500/30 p-8 bg-slate-900/50 rounded-lg shadow-2xl shadow-cyan-950/20">
+            <h2 class="text-3xl font-bold text-cyan-400 mb-2">RECRUITMENT TRIAL</h2>
+            <p class="text-sm text-slate-400 mb-6 leading-relaxed">
+                The Architect has forged the fleet. Prove you have the twitch-reflexes and spatial logic to command the "High Ground."
+            </p>
+            <div class="space-y-4 mb-8">
+                <div class="bg-slate-950 p-3 border border-slate-800 rounded flex items-center gap-4 text-left">
+                    <div class="w-8 h-8 rounded border border-cyan-500 flex items-center justify-center text-xs font-bold">01</div>
+                    <div>
+                        <div class="text-[10px] font-bold text-cyan-500">TRIAL ONE</div>
+                        <div class="text-xs text-slate-300">NEEDLE THREAD: Evasive maneuvers.</div>
+                    </div>
+                </div>
+                <div class="bg-slate-950 p-3 border border-slate-800 rounded flex items-center gap-4 text-left">
+                    <div class="w-8 h-8 rounded border border-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">02</div>
+                    <div>
+                        <div class="text-[10px] font-bold text-slate-700">TRIAL TWO</div>
+                        <div class="text-xs text-slate-600">FORENSIC GHOST: Synchronous momentum sync.</div>
+                    </div>
+                </div>
+            </div>
+            <button onclick="startGame()" class="w-full btn-cyan py-3 text-sm font-bold uppercase tracking-widest pointer-events-auto">Initiate Uplink</button>
+            <p class="text-[9px] text-slate-600 mt-4 font-mono">MD-EC AUTHENTICATION REQUIRED | SDEC-ENCRYPTED</p>
+        </div>
+    </div>
+
+    <div id="game-over" class="hidden absolute inset-0 z-30 flex items-center justify-center bg-red-950/20 backdrop-blur-sm p-6 text-center">
+        <div class="max-w-md border border-red-500/30 p-8 bg-slate-900/50 rounded-lg">
+            <h2 id="end-title" class="text-3xl font-bold text-red-500 mb-2">HULL BREACH</h2>
+            <p id="end-msg" class="text-sm text-slate-400 mb-6">Simulation terminated due to kinetic impact. Junker candidate rejected.</p>
+            
+            <div class="space-y-4 mb-6">
+                <div class="text-xs font-mono text-slate-500 uppercase">Final M-ID Potential: <span id="final-score" class="text-white">0</span></div>
+                <div id="submit-section" class="flex flex-col gap-2">
+                    <input type="text" id="pilot-name" placeholder="ENTER PILOT CALLSIGN" class="bg-slate-950 border border-slate-700 p-2 text-xs text-cyan-400 focus:outline-none focus:border-cyan-500 text-center uppercase">
+                    <button id="submit-btn" onclick="submitScore()" class="w-full bg-cyan-900/40 border border-cyan-500 text-cyan-400 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-cyan-500 hover:text-white transition">Submit to Registry</button>
+                </div>
+                <div id="submit-status" class="hidden text-[10px] font-bold uppercase py-2"></div>
+            </div>
+
+            <button onclick="location.reload()" class="w-full bg-red-900/20 border border-red-500 text-red-500 py-3 text-sm font-bold uppercase tracking-widest hover:bg-red-500 hover:text-white transition pointer-events-auto">Retry Trial</button>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, ship, debris = [], particles;
+        let score = 0;
+        let fuel = 100;
+        let gameState = 'start';
+        let moveX = 0, moveY = 0;
+        let speed = 0.5;
+        let level = 1;
+
+        const API_URL = 'http://localhost:8080/api/junker-registry';
+
+        const clock = new THREE.Clock();
+
+        async function fetchLeaderboard() {
+            try {
+                const res = await fetch(API_URL);
+                const data = await res.json();
+                const candidates = data.candidates.slice(0, 3);
+                
+                // Add leaderboard to start menu if it exists
+                const menu = document.querySelector('#start-menu .space-y-4');
+                if (candidates.length > 0) {
+                    const lbHeader = document.createElement('div');
+                    lbHeader.className = 'text-[10px] font-bold text-cyan-700 uppercase mt-4 mb-2';
+                    lbHeader.textContent = 'Top Junker Candidates';
+                    menu.appendChild(lbHeader);
+                    
+                    candidates.forEach((c, i) => {
+                        const item = document.createElement('div');
+                        item.className = 'bg-slate-950/50 p-2 border border-slate-900 rounded flex justify-between items-center text-[10px]';
+                        item.innerHTML = `
+                            <span class="text-cyan-600">0${i+1} ${c.name}</span>
+                            <span class="text-white font-bold">${c.score}</span>
+                        `;
+                        menu.appendChild(item);
+                    });
+                }
+            } catch (e) {
+                console.log('Registry offline');
+            }
+        }
+
+        async function submitScore() {
+            const name = document.getElementById('pilot-name').value;
+            if (!name) return;
+            
+            const btn = document.getElementById('submit-btn');
+            const status = document.getElementById('submit-status');
+            
+            btn.disabled = true;
+            btn.textContent = 'TRANSMITTING...';
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, score: Math.floor(score) })
+                });
+                
+                if (res.ok) {
+                    status.textContent = 'REGISTRY UPDATED';
+                    status.className = 'text-green-500 text-[10px] font-bold uppercase py-2';
+                    status.classList.remove('hidden');
+                    document.getElementById('submit-section').classList.add('hidden');
+                } else {
+                    throw new Error();
+                }
+            } catch (e) {
+                status.textContent = 'TRANSMISSION FAILED';
+                status.className = 'text-red-500 text-[10px] font-bold uppercase py-2';
+                status.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = 'RETRY SUBMISSION';
+            }
+        }
+
+        function init() {
+            fetchLeaderboard();
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x020617);
+
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.z = 10;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambient = new THREE.AmbientLight(0x111111);
+            scene.add(ambient);
+            const directional = new THREE.DirectionalLight(0x0891b2, 1);
+            directional.position.set(5, 5, 5);
+            scene.add(directional);
+
+            // Ship (The Astraea Needle)
+            const shipGroup = new THREE.Group();
+            const bodyGeo = new THREE.BoxGeometry(0.5, 0.5, 3);
+            const bodyMat = new THREE.MeshPhongMaterial({ color: 0x0f172a, shininess: 100 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            shipGroup.add(body);
+
+            // Engine glow
+            const glowGeo = new THREE.BoxGeometry(0.4, 0.4, 0.1);
+            const glowMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
+            const glow = new THREE.Mesh(glowGeo, glowMat);
+            glow.position.z = -1.55;
+            shipGroup.add(glow);
+
+            ship = shipGroup;
+            scene.add(ship);
+
+            // Background Stars
+            const starGeo = new THREE.BufferGeometry();
+            const starPos = [];
+            for(let i=0; i<5000; i++) {
+                starPos.push((Math.random()-0.5)*2000, (Math.random()-0.5)*2000, (Math.random()-0.5)*2000);
+            }
+            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+            const starMat = new THREE.PointsMaterial({ color: 0x22d3ee, size: 1 });
+            particles = new THREE.Points(starGeo, starMat);
+            scene.add(particles);
+
+            // Earth (distant)
+            const earthGeo = new THREE.SphereGeometry(200, 64, 64);
+            const earthMat = new THREE.MeshPhongMaterial({ color: 0x075985, emissive: 0x082f49, wireframe: true });
+            const earth = new THREE.Mesh(earthGeo, earthMat);
+            earth.position.set(0, -400, -800);
+            scene.add(earth);
+
+            animate();
+        }
+
+        function spawnDebris() {
+            if(gameState !== 'playing') return;
+            
+            const geo = new THREE.DodecahedronGeometry(Math.random() * 0.5 + 0.1);
+            const mat = new THREE.MeshPhongMaterial({ color: 0x334155 });
+            const mesh = new THREE.Mesh(geo, mat);
+            
+            mesh.position.set(
+                (Math.random() - 0.5) * 40,
+                (Math.random() - 0.5) * 40,
+                -100
+            );
+            mesh.velocity = Math.random() * 1 + 0.5;
+            mesh.rotationVelocity = {
+                x: Math.random() * 0.05,
+                y: Math.random() * 0.05
+            };
+            
+            scene.add(mesh);
+            debris.push(mesh);
+        }
+
+        function startGame() {
+            document.getElementById('start-menu').classList.add('hidden');
+            document.getElementById('crosshair').classList.remove('hidden');
+            gameState = 'playing';
+            document.getElementById('sync-indicator').textContent = 'SYNCED';
+            document.getElementById('sync-indicator').classList.add('text-green-500');
+            
+            // Start spawning
+            setInterval(spawnDebris, 200);
+        }
+
+        function gameOver(msg = "HULL BREACH DETECTED") {
+            gameState = 'over';
+            document.getElementById('game-over').classList.remove('hidden');
+            document.getElementById('end-msg').textContent = msg;
+            document.getElementById('final-score').textContent = Math.floor(score);
+            document.getElementById('sync-indicator').textContent = 'LOST';
+            document.getElementById('sync-indicator').classList.remove('text-green-500');
+            document.getElementById('sync-indicator').classList.add('text-red-500');
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if (gameState === 'playing') {
+                // Movement
+                ship.position.x += moveX * speed;
+                ship.position.y += moveY * speed;
+                
+                // Tilt ship based on movement
+                ship.rotation.z = -moveX * 0.5;
+                ship.rotation.x = -moveY * 0.5;
+
+                // Debris movement & Collision
+                for(let i = debris.length - 1; i >= 0; i--) {
+                    const d = debris[i];
+                    d.position.z += d.velocity;
+                    d.rotation.x += d.rotationVelocity.x;
+                    d.rotation.y += d.rotationVelocity.y;
+
+                    // Collision detection
+                    const dist = ship.position.distanceTo(d.position);
+                    if(dist < 0.8) {
+                        gameOver();
+                    }
+
+                    // Removal
+                    if(d.position.z > 20) {
+                        scene.remove(d);
+                        debris.splice(i, 1);
+                        score += 10;
+                        document.getElementById('score-val').textContent = Math.floor(score).toString().padStart(5, '0');
+                    }
+                }
+
+                // Fuel drain
+                fuel -= 0.01;
+                document.getElementById('fuel-bar').style.width = fuel + '%';
+                if(fuel <= 0) gameOver("DELTA-V EXHAUSTED");
+
+                // HUD updates
+                document.getElementById('alt-val').textContent = (421.4 + (ship.position.y * 0.1)).toFixed(2) + "km";
+                document.getElementById('vel-val').textContent = (7.66 + (speed * 0.1)).toFixed(2) + "km/s";
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Input handling
+        window.addEventListener('keydown', (e) => {
+            if(e.key === 'ArrowLeft' || e.key === 'a') moveX = -1;
+            if(e.key === 'ArrowRight' || e.key === 'd') moveX = 1;
+            if(e.key === 'ArrowUp' || e.key === 'w') moveY = 1;
+            if(e.key === 'ArrowDown' || e.key === 's') moveY = -1;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if(['ArrowLeft', 'ArrowRight', 'a', 'd'].includes(e.key)) moveX = 0;
+            if(['ArrowUp', 'ArrowDown', 'w', 's'].includes(e.key)) moveY = 0;
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        init();
+    </script>
+</body>
+</html>

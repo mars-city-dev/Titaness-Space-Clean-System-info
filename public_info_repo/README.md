@@ -24,6 +24,8 @@ This repository serves as the public "Read-Only" headquarters for the SDEC proto
 *   [**SDEC_FRAMEWORK.md**](./SDEC_FRAMEWORK.md): The legal innovation of "Protective Retrieval" and the Abandonment Mechanism.
 *   [**FLEET_SPECIFICATIONS.md**](./FLEET_SPECIFICATIONS.md): Details on the Vesta Scout, Retrieval Haulers, and TCU containment.
 *   [**TOKENIZED_TRASH_ECONOMICS.md**](./TOKENIZED_TRASH_ECONOMICS.md): The M-ID token model and Sovereign Subscription tiers.
+*   [**Simulator**](./Simulator/index.html): The **Kessler Run Simulator** - Junker Guild Recruitment Drive.
+
 
 ---
 
