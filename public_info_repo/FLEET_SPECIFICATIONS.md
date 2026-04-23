@@ -1,4 +1,4 @@
-# SDEC Specialized Fleet Specifications
+# Titaness: Space Clean System | Space Debris Mitigation Platform | Space Debris Excellence Consortium SDEC Specialized Fleet Specifications
 ## Active Remediation & Selective Harvesting
 
 The SDEC fleet consists of specialized robotic units designed for the active removal of orbital threats.
