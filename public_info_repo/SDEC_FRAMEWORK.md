@@ -1,7 +1,7 @@
-# SDEC Regulatory Framework
+# SDEC Regulatory Framework of the Titaness: Space Clean System & Space Debris Remediation Platform
 ## Resolving Sovereignty through Environmental Intervention
 
-The SDEC (Space Debris Excellence Consortium) framework provides the international community with a legal and technical path to orbital remediation that respects national jurisdiction while prioritizing environmental safety.
+Titaness: Space Clean System and The SDEC (Space Debris Excellence Consortium) framework provides the international community with a legal and technical path to orbital remediation that respects national jurisdiction while prioritizing environmental safety.
 
 ---
 
