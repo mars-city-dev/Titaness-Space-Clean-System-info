@@ -31,4 +31,4 @@ To maintain international trust, the SDEC fleet operates under "Neutrality as Ar
 ---
 
 *"Sovereignty is respected. The void is cleaned."*
-**SDEC - Space Debris Excellence Consortium**
+**SDEC - Space Debris Excellence Consortium**  contact: titaness.sentient.systems@gmail.com
