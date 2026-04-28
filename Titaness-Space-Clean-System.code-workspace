@@ -7,5 +7,7 @@
 			"path": "../Titaness-Web-Foundry"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"powershell.cwd": "Titaness-Space-Clean-System"
+	}
 }
