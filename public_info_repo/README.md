@@ -2,7 +2,7 @@
 ## The Global Framework for Orbital Salvage & Environmental Intervention
 
 **Official Repository of the Space Debris Excellence Consortium (SDEC)**  
-**Authored by:** Titaness: Sentient Systems Co. - chris.olds@gmail.com 
+**Authored by:** Titaness: Sentient Systems Co. - titaness.sentient.systems@gmail.com 
 **Strategic Partner:** [metadataexcellence.com](https://metadataexcellence.com/)
 
 ---
