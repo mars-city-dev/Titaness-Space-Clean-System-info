@@ -8,6 +8,12 @@
 		}
 	],
 	"settings": {
-		"powershell.cwd": "Titaness-Space-Clean-System"
+		"powershell.cwd": "Titaness-Space-Clean-System",
+		"python.defaultInterpreterPath": "C:\\Python314\\python.exe",
+		"python.languageServer": "Pylance",
+		"python.analysis.indexing": false,
+		"python.analysis.diagnosticMode": "openFilesOnly",
+		"python.analysis.autoImportCompletions": false,
+		"terminal.activateEnvInCurrentTerminal": false
 	}
 }

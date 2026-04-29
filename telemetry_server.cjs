@@ -15,7 +15,7 @@ if (!fs.existsSync(REGISTRY_PATH)) {
   fs.writeFileSync(REGISTRY_PATH, JSON.stringify({ candidates: [] }, null, 2));
 }
 
-const MASTER_LEDGER_PATH = "d:\Projects\Titaness-Metadata-Faktory\library\TITANESS_CENTRAL_LEDGER_SSOT.json";
+const MASTER_LEDGER_PATH = "d:\\Projects\\Titaness-Metadata-Faktory\\library\\TITANESS_CENTRAL_LEDGER_SSOT.json";
 
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
