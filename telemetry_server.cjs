@@ -15,11 +15,11 @@ if (!fs.existsSync(REGISTRY_PATH)) {
   fs.writeFileSync(REGISTRY_PATH, JSON.stringify({ candidates: [] }, null, 2));
 }
 
-const MASTER_LEDGER_PATH = r"d:\Projects\Titaness-Metadata-Faktory\library\TITANESS_CENTRAL_LEDGER_SSOT.json";
+const MASTER_LEDGER_PATH = "d:\Projects\Titaness-Metadata-Faktory\library\TITANESS_CENTRAL_LEDGER_SSOT.json";
 
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
-  
+
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -39,10 +39,10 @@ const server = http.createServer((req, res) => {
       try {
         const payload = JSON.parse(body);
         if (!payload.objectId) throw new Error('Missing objectId');
-        
+
         const ledger = JSON.parse(fs.readFileSync(MASTER_LEDGER_PATH, 'utf8'));
         const m_id = `urn:mdec:${require('crypto').randomUUID()}`;
-        
+
         // Add Entry
         ledger.entries[m_id] = {
           m_id: m_id,
@@ -53,13 +53,13 @@ const server = http.createServer((req, res) => {
           provenance: "TITANESS_SPACE_CLEAN_CONSOLE_v1.0",
           signet: "Christopher-Olds-07-14-1962-2026-Engineer-Musician-Author-Poet-USA"
         };
-        
+
         // Update Metadata
         ledger._meta.incinerated_debris = (ledger._meta.incinerated_debris || 0) + 1;
         ledger._meta.last_sync = new Date().toISOString();
-        
+
         fs.writeFileSync(MASTER_LEDGER_PATH, JSON.stringify(ledger, null, 4));
-        
+
         console.log(`[LEDGER] Acquisition Recorded: ${m_id}`);
         res.writeHead(201, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ status: 'SUCCESS', m_id: m_id }));
@@ -80,8 +80,8 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(data));
       return;
-    } 
-    
+    }
+
     if (req.method === 'POST') {
       let body = '';
       req.on('data', chunk => { body += chunk.toString(); });
@@ -91,14 +91,14 @@ const server = http.createServer((req, res) => {
           if (!newCandidate.name || typeof newCandidate.score !== 'number') {
             throw new Error('Invalid Candidate Data');
           }
-          
+
           const data = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8'));
           newCandidate.date = new Date().toISOString();
           data.candidates.push(newCandidate);
-          
+
           fs.writeFileSync(REGISTRY_PATH, JSON.stringify(data, null, 2));
           broadcast({ type: 'NEW_JUNKER', name: newCandidate.name, score: newCandidate.score });
-          
+
           res.writeHead(201, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ status: 'SUCCESS', message: 'Candidate Registered' }));
         } catch (err) {
@@ -114,7 +114,7 @@ const server = http.createServer((req, res) => {
   if (parsedUrl.pathname === '/tle') {
     const category = parsedUrl.query.GROUP || 'active';
     const celestrakUrl = `https://celestrak.org/NORAD/elements/gp.php?GROUP=${category}&FORMAT=tle`;
-    
+
     https.get(celestrakUrl, (proxyRes) => {
       let data = '';
       proxyRes.on('data', (chunk) => { data += chunk; });
@@ -146,7 +146,7 @@ console.log(`TITANESS COMMAND CORE started on http://localhost:${PORT}`);
 
 wss.on('connection', (ws) => {
   console.log('[SYSTEM] Console Connected via WebSocket');
-  
+
   let currentSatRec = null;
 
   ws.on('message', (message) => {
@@ -175,13 +175,13 @@ wss.on('connection', (ws) => {
       if (positionEci && velocityEci) {
         // Calculate velocity magnitude as a proxy for "Sync Error" (relative to station-keeping)
         const velMag = Math.sqrt(
-          Math.pow(velocityEci.x, 2) + 
-          Math.pow(velocityEci.y, 2) + 
+          Math.pow(velocityEci.x, 2) +
+          Math.pow(velocityEci.y, 2) +
           Math.pow(velocityEci.z, 2)
         );
-        
+
         // Normalize velocity magnitude to a readable "Sync Error" range for the UI
-        syncError = (velMag / 1000).toFixed(4); 
+        syncError = (velMag / 1000).toFixed(4);
         position = {
           x: positionEci.x.toFixed(2),
           y: positionEci.y.toFixed(2),
@@ -197,7 +197,7 @@ wss.on('connection', (ws) => {
       position: position,
       utc: new Date().toISOString()
     };
-    
+
     ws.send(JSON.stringify(telemetry));
   }, 1000);
 
