@@ -83,21 +83,23 @@ const App = () => {
     initData();
   }, []);
 
+  const wsRef = React.useRef(null);
+
   // WebSocket Telemetry Connection
   useEffect(() => {
-    // Dynamic host resolution for multi-context Federation access
     const ws = new WebSocket(`ws://${window.location.hostname}:8080`);
+    wsRef.current = ws;
     
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       setTelemetry({
-        propellant: `${data.propellant}%`,
-        syncError: `${data.syncError} rad/s`
+        propellant: data.propellant,
+        syncError: data.syncError
       });
       setTime(data.utc);
     };
 
-    ws.onerror = () => {
+    ws.onclose = () => {
       // Fallback if server is not running
       const timer = setInterval(() => setTime(new Date().toISOString()), 1000);
       return () => clearInterval(timer);
@@ -106,20 +108,49 @@ const App = () => {
     return () => ws.close();
   }, []);
 
-  const handleAcquire = () => {
+  // Sync Target with Physics Engine
+  useEffect(() => {
+    if (selectedDebris && wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'SET_TARGET',
+        id: selectedDebris.id,
+        tle1: selectedDebris.tle1,
+        tle2: selectedDebris.tle2
+      }));
+    }
+  }, [selectedDebris]);
+
+  const handleAcquire = async () => {
     if (!selectedDebris) return;
     setStatus('CYAN');
     setLog(prev => [`[GNC] ACQUIRE COMMAND RECEIVED for ${selectedDebris.id}`, ...prev]);
     
-    const newMID = generateMID();
-    setTimeout(() => {
-      setLog(prev => [`[MdEC] M-ID Generation Successful: ${newMID}`, ...prev]);
-      setLedgerEntries(prev => [{
-        timestamp: new Date().toISOString().split('T')[1].split('.')[0],
-        objectId: selectedDebris.id,
-        mid: newMID
-      }, ...prev]);
-    }, 2000);
+    try {
+      const response = await fetch(`http://${window.location.hostname}:8080/api/mdec-ledger`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          objectId: selectedDebris.id,
+          name: selectedDebris.name
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.status === 'SUCCESS') {
+        setLog(prev => [`[MdEC] M-ID COMMITTED TO SSOT: ${result.m_id}`, ...prev]);
+        setLedgerEntries(prev => [{
+          timestamp: new Date().toLocaleTimeString(),
+          objectId: selectedDebris.id,
+          mid: result.m_id
+        }, ...prev]);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (err) {
+      setLog(prev => [`[ERROR] Ledger Write Failed: ${err.message}`, ...prev]);
+      setStatus('AMBER');
+    }
   };
 
   const resetStatus = () => {
